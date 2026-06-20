@@ -46,14 +46,14 @@ export async function telemetryData(context) {
           context.data.sentry.setTag(key, value);
         }
       });
-      const CF = JSON.parse(JSON.stringify(context.request.cf));
+      const CF = JSON.parse(JSON.stringify(context.request.cf || {}));
       const parsedCF = {};
       for (const key in CF) {
         if (typeof CF[key] == "object") {
           parsedCF[key] = JSON.stringify(CF[key]);
         } else {
           parsedCF[key] = CF[key];
-          if (CF[key].length > 0) {
+          if (CF[key] && CF[key].length > 0) {
             context.data.sentry.setTag(key, CF[key]);
           }
         }
@@ -80,7 +80,10 @@ export async function telemetryData(context) {
     } catch (e) {
       console.log(e);
     } finally {
-      context.data.transaction.finish();
+      // 安全调用: transaction 可能在 try 抛错前未赋值
+      if (context.data && context.data.transaction && typeof context.data.transaction.finish === 'function') {
+        try { context.data.transaction.finish(); } catch (_) { /* ignore */ }
+      }
     }
   }
 
